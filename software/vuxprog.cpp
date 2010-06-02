@@ -24,14 +24,18 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <cctype>
+#include <cstdlib>
+#include "picoopt.h"
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/select.h>
-#include "picoopt.h"
 
 using namespace std;
 
 typedef unsigned char byte;
+typedef unsigned short word;
 
 const char* usage[] = {
   "",
@@ -288,22 +292,81 @@ private:
 };
 
 string read_file(string filename, storage::format format) {
-  ios::openmode flags = ios::ate;
+  ios::openmode flags = ios::in;
   if(format == storage::binary)
-    flags |= ios::binary;
+    flags |= ios::binary | ios::ate;
 
   ifstream in(filename.c_str(), flags);
   if(!in)
     throw new io_error("cannot read from data file");
 
-  unsigned size = (unsigned) in.tellg();
-  in.seekg(0);
-
-  char data[size];
-  in.read(data, size);
-
   if(format == storage::binary) {
+    unsigned size = (unsigned) in.tellg();
+    in.seekg(0);
+
+    char data[size];
+    in.read(data, size);
+
     return string(data, size);
+  } else if(format == storage::ihex) {
+    byte* image = (byte*) malloc(1);
+    unsigned image_len = 0;
+
+    while(in) {
+      string hdata;
+      getline(in, hdata, '\n');
+
+      if(hdata[hdata.length()-1] == '\r')
+        hdata = hdata.substr(0, hdata.length() - 1);
+
+      if(hdata[0] != ':' || hdata.length() < 11 || hdata.length() % 2 != 1)
+        throw new input_error("invalid ihex data (format)");
+
+      unsigned blen = (hdata.length()-1)/2;
+      byte bdata[blen], chksum = 0;
+
+      for(int j = 1, k = 0; j < hdata.length(); j += 2) {
+        string hbyte = hdata.substr(j, 2);
+        bdata[k++] = strtoul(hbyte.c_str(), NULL, 16);
+      }
+
+      if(blen != bdata[0] + 5)
+        throw new input_error("invalid ihex data (payload size)");
+
+      for(int i = 0; i < blen-1; i++)
+        chksum += bdata[i];
+
+      if((byte) (chksum + bdata[blen-1]) != 0)
+        throw new input_error("invalid ihex data (checksum)");
+
+      byte ihex_len = bdata[0];
+      word ihex_addr = (bdata[1] << 8) + bdata[2];
+      byte ihex_type = bdata[3];
+
+      if(ihex_type == 0) { // data
+        if(image_len < ihex_addr + ihex_len)
+          image_len = ihex_addr + ihex_len;
+        image = (byte*) realloc(image, image_len);
+
+        for(int i = 0; i < ihex_len; i++)
+          image[ihex_addr+i] = bdata[4+i];
+      } else if(ihex_type == 1) { // eof
+        return string((char*) image, image_len);
+      } else if(ihex_type == 3) { // .org
+        if(ihex_len != 4)
+          throw new input_error("invalid ihex data (invalid .org)");
+
+        unsigned int org = (bdata[4] << 24) + (bdata[5] << 16) +
+            (bdata[6] << 8) + bdata[7];
+
+        for(int i = 0; i < org; i++)
+          image[i] = 0xff; // erase anything below .org
+      } else {
+        throw new input_error("invalid ihex data (type)");
+      }
+    }
+
+    throw new input_error("invalid ihex data (unterminated file)");
   }
 }
 
