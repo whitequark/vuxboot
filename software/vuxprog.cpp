@@ -86,6 +86,11 @@ public:
   hardware_error(string message) : error(message) {}
 };
 
+class input_error: public error {
+public:
+  input_error(string message) : error(message) {}
+};
+
 class protocol_error: public error {
 public:
   protocol_error(string info, string node="") : error(make_message(info, node)) {}
@@ -158,7 +163,7 @@ public:
 
   string read_flash(unsigned page) {
     if(page > flash_pages())
-      throw new feature_error("flash page address too big");
+      throw new input_error("flash page address too big");
 
     string req = "r";
     req += char(page & 0xff);
@@ -170,7 +175,7 @@ public:
 
   void write_flash(unsigned page, string words) {
     if(words.length() != _page_words * 2)
-      throw new feature_error("flash page size mismatch");
+      throw new error("flash page size mismatch");
 
     string req = "w", status;
     req += words;
@@ -195,7 +200,7 @@ public:
     if(!_has_eeprom)
       throw new feature_error("no eeprom");
     if(address > _eeprom_bytes)
-      throw new feature_error("eeprom address too big");
+      throw new input_error("eeprom address too big");
 
     string req = "W";
     req += char(address & 0xff);
@@ -449,6 +454,9 @@ int main(int argc, char* argv[]) {
       cerr << "unknown action!" << endl;
       return 1;
     }
+  } catch(input_error *e) {
+    cerr << "input error: " << e->message() << endl;
+    return 1;
   } catch(io_error *e) {
     cerr << "i/o error: " << e->message() << endl;
     return 1;
@@ -457,6 +465,9 @@ int main(int argc, char* argv[]) {
     return 1;
   } catch(hardware_error *e) {
     cerr << "hardware error: " << e->message() << endl;
+    return 1;
+  } catch(error *e) {
+    cerr << "internal error: " << e->message() << endl;
     return 1;
   }
 
