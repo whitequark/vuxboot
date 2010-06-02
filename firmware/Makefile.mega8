@@ -1,0 +1,19 @@
+# VuXboot configuration for ATmega8 microcontroller
+
+# Page = 32 words (2^5)
+PAGE_WORDS=5
+# Flash = 128 pages (2^7)
+FLASH_PAGES=7
+
+# EEPROM = 512 bytes (2^9)
+EEPROM=1
+EEPROM_BYTES=9
+
+# Bootloader uses last 8 pages
+BOOT_BYTE=0x1f00
+BOOT_PAGES=8
+
+CCONFIG=-mmcu=atmega8
+DUDECONFIG=-p m8
+
+INFO="Set boot size to 8 pages: BOOTSZ0=0, BOOTSZ1=1"

@@ -1,0 +1,15 @@
+$[^x] = ln2(x); i.e. $[^32] = 5
+${checksum} = sum of all previous bytes in packet truncated to 1 byte
+
+CMD   MEANING          CONVERSATION
+s     get signature    dev: 'VuX' ('e' $[^eeprom bytes] | 'f') $[page words] $[^flash pages] $[boot pages] ${checksum}
+w     write flash      host: $[page low] $[page high]
+                       dev:  '.'
+                       host: ($[word low] $[word high]){page words}
+                       dev:  '.'
+r     read flash       host: $[page low] $[page high]
+                       dev:  ($[word low] $[word high]){page words}
+W     write eeprom     host: $[address low] $[address high] $[byte]
+                       dev:  '.'
+R     read eeprom      dev:  $[byte]{eeprom bytes}
+q     quit bootloader
