@@ -45,6 +45,8 @@ const char* usage[] = {
   "",
   "  Actions|abbreviations:",
   "    flash_read|fr <filename>",
+  "      By default, flash_read dumps only application code. To include",
+  "      bootloader code, use -a option.",
   "    flash_write|fw <filename>",
   "    eeprom_read|er <filename>",
   "    eeprom_write|ew <filename>",
@@ -54,6 +56,8 @@ const char* usage[] = {
   "    -s PORT\tset serial port device; default is /dev/ttyUSB0",
   "    -f FORMAT\tset file format; FORMAT may be ihex (default) or binary",
   "    -i SEQ\tstart bootloader by sending SEQ to port",
+  "    -r\t\treset device after successful programming",
+  "    -a\t\tdump full flash including bootloader code",
   "    -F\t\tdo things which sane human wouldn't",
   ""
 };
@@ -389,6 +393,8 @@ int main(int argc, char* argv[]) {
   opts.option('f', true);
   opts.option('i', true);
   opts.option('F');
+  opts.option('a');
+  opts.option('r');
 
   if(!opts.parse(argc, argv) || opts.has('h') || !opts.valid() || (opts.args().size() != 2 &&
         (opts.args().size() != 1 || (opts.args()[0] != "r" && opts.args()[0] != "reset")))) {
@@ -399,6 +405,8 @@ int main(int argc, char* argv[]) {
   }
 
   bool force = opts.has('F');
+  bool do_reset = opts.has('r');
+  bool dump_all = opts.has('a');
 
   storage::format format = storage::ihex;
   if(opts.has('f')) {
@@ -430,8 +438,11 @@ int main(int argc, char* argv[]) {
     if(action == "flash_read" || action == "fr") {
       string flash;
 
+      unsigned last_page = dump_all ? bl.flash_pages() :
+            bl.flash_pages() - bl.boot_pages();
+
       cout << "Reading flash: " << flush;
-      for(int page = 0; page < bl.flash_pages(); page++) {
+      for(int page = 0; page < last_page; page++) {
         flash += bl.read_flash(page);
         if(page % 10 == 1)
           cout << "." << flush;
@@ -514,11 +525,15 @@ int main(int argc, char* argv[]) {
         return 1;
       }
     } else if(action == "reset" || action == "r") {
-      cout << "Resetting device..." << endl;
-      bl.reset();
+      do_reset = true;
     } else {
       cerr << "unknown action!" << endl;
       return 1;
+    }
+
+    if(do_reset) {
+      cout << "Resetting device..." << endl;
+      bl.reset();
     }
   } catch(input_error *e) {
     cerr << "input error: " << e->message() << endl;
