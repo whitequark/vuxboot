@@ -241,7 +241,6 @@ public:
     return _page_words;
   }
 
-private:
   string read(unsigned length, unsigned timeout=5) {
     char data[length];
 
@@ -420,6 +419,10 @@ int main(int argc, char* argv[]) {
 
   try {
     vuxboot bl(port);
+
+    if(opts.has('i'))
+      bl.write(opts.get('i'));
+
     bl.identify();
     bl.describe();
 
