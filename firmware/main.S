@@ -54,26 +54,24 @@ entry:
 ; set up UART: 8n1
 #ifndef USER_UBRR
 ; use calculated by util/setbaud.h
-#if UBRRH_VALUE > 0
 	ldi	r16, UBRRH_VALUE
 	out	IO(UBRRH), r16
-#endif
 	ldi	r16, UBRRL_VALUE
 	out	IO(UBRRL), r16
 #else
 ; use provided
-#if (USER_UBRR >> 8) > 0
 	ldi	r16, hi8(USER_UBRR)
 	out	IO(UBRRH), r16
-#endif
 	ldi	r16, lo8(USER_UBRR)
 	out	IO(UBRRL), r16
 #endif
 
 #ifdef USE_2X
 	ldi	r16, _BV(U2X)
-	out	IO(UCSRA), r16
+#else
+	clr	r16
 #endif
+	out	IO(UCSRA), r16
 
 	ldi	r16, _BV(RXEN) | _BV(TXEN)
 	out	IO(UCSRB), r16
