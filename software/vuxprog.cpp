@@ -373,10 +373,10 @@ string read_file(string filename, storage::format format) {
   }
 }
 
-bool write_file(string filename, storage::format format, string data) {
-  ios::openmode flags;
+void write_file(string filename, storage::format format, string data) {
+  ios::openmode flags = ios::out;
   if(format == storage::binary)
-    flags = ios::binary;
+    flags |= ios::binary;
 
   ofstream out(filename.c_str(), flags);
   if(!out)
@@ -384,6 +384,34 @@ bool write_file(string filename, storage::format format, string data) {
 
   if(format == storage::binary) {
     out << data;
+  } else if(format == storage::ihex) {
+    // data is always aligned by 16 bytes
+    for(int i = 0; i < data.length() / 16; i++) {
+      string subdata = data.substr(i * 16, 16);
+      if(subdata != string(16, '\xff')) {
+        char left[10], right[3];
+        word addr = i * 16;
+        byte checksum = 0x10 + byte(addr & 0xff) + byte(addr >> 8) + 0x01;
+
+        sprintf(left, ":10%04X01", addr);
+        out << left;
+
+        for(int j = 0; j < subdata.length(); j++) {
+          char middle[3];
+          sprintf(middle, "%02X", (byte) subdata[j]);
+          out << middle;
+
+          checksum += subdata[j];
+        }
+
+        sprintf(right, "%02X", (byte) (0x100 - checksum));
+        out << right;
+
+        out << endl;
+      }
+    }
+
+    out << ":00000001FF" << endl; // EOF*/
   }
 }
 
