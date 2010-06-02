@@ -3,9 +3,7 @@ ${checksum} = sum of all previous bytes in packet truncated to 1 byte
 
 CMD   MEANING          CONVERSATION
 s     get signature    dev: 'VuX' ('e' $[^eeprom bytes] | 'f') $[page words] $[^flash pages] $[boot pages] ${checksum}
-w     write flash      host: $[page low] $[page high]
-                       dev:  '.'
-                       host: ($[word low] $[word high]){page words}
+w     write flash      host: ($[word low] $[word high]){page words} $[page low] $[page high]
                        dev:  '.'
 r     read flash       host: $[page low] $[page high]
                        dev:  ($[word low] $[word high]){page words}

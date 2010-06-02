@@ -50,6 +50,7 @@ const char* usage[] = {
   "    -s PORT\tset serial port device; default is /dev/ttyUSB0",
   "    -f FORMAT\tset file format; FORMAT may be ihex (default) or binary",
   "    -i SEQ\tstart bootloader by sending SEQ to port",
+  "    -F\t\tdo things which sane human wouldn't",
   ""
 };
 
@@ -172,15 +173,12 @@ public:
       throw new feature_error("flash page size mismatch");
 
     string req = "w", status;
+    req += words;
     req += char(page & 0xff);
     req += char(page >> 8);
     write(req);
 
     status = read(1);
-    if(status != ".")
-      throw new hardware_error("cannot erase flash");
-
-    write(words);
     if(status != ".")
       throw new hardware_error("cannot write flash");
   }
@@ -293,11 +291,11 @@ string read_file(string filename, storage::format format) {
   if(!in)
     throw new io_error("cannot read from data file");
 
-  unsigned size = in.tellg();
+  unsigned size = (unsigned) in.tellg();
   in.seekg(0);
 
   char data[size];
-  in.get(data, size);
+  in.read(data, size);
 
   if(format == storage::binary) {
     return string(data, size);
@@ -323,6 +321,7 @@ int main(int argc, char* argv[]) {
   opts.option('s', true);
   opts.option('f', true);
   opts.option('i', true);
+  opts.option('F');
 
   if(!opts.parse(argc, argv) || opts.has('h') || !opts.valid() || (opts.args().size() != 2 &&
         (opts.args().size() != 1 || (opts.args()[0] != "r" && opts.args()[0] != "reset")))) {
@@ -331,6 +330,8 @@ int main(int argc, char* argv[]) {
         cout << usage[i] << endl;
     return 1;
   }
+
+  bool force = opts.has('F');
 
   storage::format format = storage::ihex;
   if(opts.has('f')) {
@@ -373,6 +374,23 @@ int main(int argc, char* argv[]) {
       unsigned page_bytes = bl.page_words() * 2;
       unsigned even_pages = flash.length() / page_bytes + (flash.length() % page_bytes > 0);
       flash.resize(even_pages * page_bytes, 0xff);
+
+      if(even_pages > bl.flash_pages() - bl.boot_pages()) {
+        cerr << "                         / ! \\      / ! \\       / ! \\" << endl;
+        if(!force) {
+          cerr << "* Image is " << even_pages << " pages long; writing it will "
+               << "overwrite the bootloader" << endl << "* at pages "
+               << bl.flash_pages() - bl.boot_pages() << "-" << bl.flash_pages() - 1
+               << ". "
+               << "Pass the -F flag if you really know what are you doing." << endl
+               << "* Probably you will just overwrite first page of bootloader "
+               << "and then everything" << endl
+               << "* will fail, leaving you with a nice brick." << endl;
+          return 1;
+        } else if(force) {
+          cerr << "* Shooting myself in the leg." << endl;
+        }
+      }
       
       cout << "Writing flash: " << flush;
 

@@ -9,11 +9,11 @@ FLASH_PAGES=7
 EEPROM=1
 EEPROM_BYTES=9
 
-# Bootloader uses last 8 pages
+# Bootloader uses last 4 pages
 BOOT_BYTE=0x1f00
-BOOT_PAGES=8
+BOOT_PAGES=4
 
 CCONFIG=-mmcu=atmega8
 DUDECONFIG=-p m8
 
-INFO="Set boot size to 8 pages: BOOTSZ0=0, BOOTSZ1=1"
+INFO="Set boot size to 4 pages: BOOTSZ0=1, BOOTSZ1=1"

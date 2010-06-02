@@ -132,35 +132,26 @@ the_loop:
 
 recv_page:
 ; receive and convert page number => ZH:r5
-	rcall	recv
 	ldi	r16, PAGE_WORDS*2
+
+	rcall	recv
 	mul	r20, r16 ; no lsl rX, n instruction!
 
 	mov	ZH, r1
 	mov	r5, r0
 
 	rcall	recv
-	ldi	r16, PAGE_WORDS*2
 	mul	r20, r16
 
 	add	ZH, r0
+	mov	ZL, r5
 
 	ret
 
 cmd_write_flash:
-	rcall recv_page
-
-; erase page
-	mov	ZL, r5
-
-	ldi	r16, _BV(PGERS) | _BV(SPMEN)
-	rcall	do_spm
-
-	ldi	r20, '.'
-	rcall	send
-
 ; fill internal buffer
-	ldi	ZL, 0
+	ldi	r17, 2
+	clr	ZL
 0:	rcall	recv
 	mov	r0, r20
 	rcall	recv
@@ -169,24 +160,31 @@ cmd_write_flash:
 	ldi	r16, _BV(SPMEN)
 	rcall	do_spm
 
-	inc	ZL
-	cpi	ZL, PAGE_WORDS
+	add	ZL, r17
+	cpi	ZL, PAGE_WORDS*2
 	brne	0b
 
-; do the programming itself
-	mov	ZL, r5
+; read page number
+	rcall recv_page
 
+; erase page
+	ldi	r16, _BV(PGERS) | _BV(SPMEN)
+	rcall	do_spm
+
+; do the programming itself
 	ldi	r16, _BV(PGWRT) | _BV(SPMEN)
 	rcall	do_spm
 
 	ldi	r20, '.'
 	rcall	send
 
-	rjmp the_loop
+	ldi	r16, _BV(RWWSRE) | _BV(SPMEN)
+	rcall	do_spm
+
+	rjmp	the_loop
 
 cmd_read_flash:
 	rcall	recv_page
-	mov	ZL, r5
 
 	ldi	r16, PAGE_WORDS*2
 0:	lpm	r20, Z+
@@ -224,8 +222,8 @@ cmd_write_eeprom:
 	rcall	recv
 	out	IO(EEDR), r20
 
-	sbi	IO(EECR), EEMWE
-	sbi	IO(EECR), EEWE
+	sbi	IO(EECR), _BV(EEMWE)
+	sbi	IO(EECR), _BV(EEWE)
 
 0:	sbic	IO(EECR), EEWE
 	rjmp	0b
