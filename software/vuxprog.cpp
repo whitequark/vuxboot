@@ -26,7 +26,6 @@
 #include <fstream>
 #include <cctype>
 #include <cstdlib>
-#include <cerrno>
 #include "picoopt.h"
 
 #include <unistd.h>
@@ -123,7 +122,7 @@ class vuxboot {
 
 public:
   vuxboot(string filename, unsigned baud = B115200) : _debug(false) {
-    _fd = open(filename.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
+    _fd = open(filename.c_str(), O_RDWR | O_NOCTTY);
     if(!_fd) throw new io_error("cannot open port");
 
     // Serial initialization was written with FTDI USB-to-serial converters
@@ -142,9 +141,7 @@ public:
   }
 
   ~vuxboot() {
-    // do you ever want to kitten(1) your ttyUSB?
     tcsetattr(_fd, TCSANOW, &_termios);
-
     close(_fd);
   }
 
@@ -310,14 +307,10 @@ public:
       }
 
       retval = ::read(_fd, data + received, length);
-      if(retval == -1 && errno != EAGAIN) {
+      if(retval == -1) {
         throw new io_error("cannot read()");
       } else if(retval == 0) {
         throw new io_error("read() == 0");
-      } else if(retval == -1) {
-        if(_debug)
-          cerr << "{EAGAIN} ";
-        continue;
       }
 
       if(_debug) {
