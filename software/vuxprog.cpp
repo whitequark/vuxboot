@@ -120,7 +120,7 @@ private:
 
 class vuxboot {
 public:
-  vuxboot(string filename, unsigned baud = 115200) : debug(false) {
+  vuxboot(string filename, unsigned baud = 115200) : _debug(false) {
     _fd = open(filename.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
     if(!_fd) throw new io_error("cannot open port");
 
@@ -153,11 +153,11 @@ public:
   }
 
   bool get_debug() {
-    return debug;
+    return _debug;
   }
 
   void set_debug(bool new_debug) {
-    debug = new_debug;
+    _debug = new_debug;
   }
 
   void identify() {
@@ -282,7 +282,7 @@ public:
   string read(unsigned length, unsigned timeout=5) {
     char data[length];
 
-    if(debug)
+    if(_debug)
       cerr << "read(" << length << "): ";
 
     unsigned received = 0;
@@ -312,12 +312,12 @@ public:
       } else if(retval == 0) {
         throw new io_error("read() == 0");
       } else if(retval == -1) {
-        if(debug)
+        if(_debug)
           cerr << "{EAGAIN} ";
         continue;
       }
 
-      if(debug) {
+      if(_debug) {
         cerr << "{";
         for(int i = 0; i < retval; i++) {
           char val[3];
@@ -337,14 +337,14 @@ public:
       received += retval;
     }
 
-    if(debug)
+    if(_debug)
       cerr << endl;
 
     return string(data, received);
   }
 
   void write(string data) {
-    if(debug) {
+    if(_debug) {
       cerr << "write(" << data.length() << "): {";
       for(int i = 0; i < data.length(); i++) {
         char val[3];
@@ -370,7 +370,8 @@ public:
   }
 
 private:
-  bool debug;
+  bool _debug;
+
   int _fd;
 
   bool _has_eeprom;
