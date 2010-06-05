@@ -257,6 +257,9 @@ public:
   string read(unsigned length, unsigned timeout=5) {
     char data[length];
 
+    if(debug)
+      cerr << "read(" << length << "): ";
+
     unsigned received = 0;
     while(received < length) {
       struct timeval to = {0};
@@ -284,7 +287,7 @@ public:
       }
 
       if(debug) {
-        cerr << "read(";
+        cerr << "{";
         for(int i = 0; i < retval; i++) {
           char val[3];
           sprintf(val, "%02X", *(data + received + i));
@@ -297,18 +300,21 @@ public:
           else
             cerr << '.';
         }
-        cerr << ")" << endl;
+        cerr << "} ";
       }
 
       received += retval;
     }
+
+    if(debug)
+      cerr << endl;
 
     return string(data, received);
   }
 
   void write(string data) {
     if(debug) {
-      cerr << "write(";
+      cerr << "write(" << data.length() << "): {";
       for(int i = 0; i < data.length(); i++) {
         char val[3];
         sprintf(val, "%02X", data[i]);
@@ -316,6 +322,7 @@ public:
           cerr << ' ';
         cerr << val;
       }
+      cerr << ' ';
       for(int i = 0; i < data.length(); i++) {
         char chr = data[i];
         if(isgraph(chr))
@@ -323,7 +330,7 @@ public:
         else
           cerr << '.';
       }
-      cerr << ")" << endl;
+      cerr << "}" << endl;
     }
 
     if(::write(_fd, data.c_str(), data.length()) != data.length()) {
