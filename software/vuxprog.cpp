@@ -26,6 +26,7 @@
 #include <fstream>
 #include <cctype>
 #include <cstdlib>
+#include <cerrno>
 #include "picoopt.h"
 
 #include <unistd.h>
@@ -282,8 +283,14 @@ public:
       }
 
       retval = ::read(_fd, data + received, length);
-      if(retval == -1) {
+      if(retval == -1 && errno != EAGAIN) {
         throw new io_error("cannot read()");
+      } else if(retval == 0) {
+        throw new io_error("read() == 0");
+      } else if(retval == -1) {
+        if(debug)
+          cerr << "{EAGAIN} ";
+        continue;
       }
 
       if(debug) {
