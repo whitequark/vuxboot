@@ -321,7 +321,7 @@ public:
         cerr << "{";
         for(int i = 0; i < retval; i++) {
           char val[3];
-          sprintf(val, "%02X", *(data + received + i));
+          sprintf(val, "%02X", (unsigned char) *(data + received + i));
           cerr << val << ' ';
         }
         for(int i = 0; i < retval; i++) {
