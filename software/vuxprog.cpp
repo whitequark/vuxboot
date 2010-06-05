@@ -119,6 +119,8 @@ private:
 };
 
 class vuxboot {
+  static const char* SIGNATURE;
+
 public:
   vuxboot(string filename, unsigned baud = B115200) : _debug(false) {
     _fd = open(filename.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
@@ -157,8 +159,15 @@ public:
   void identify() {
     write("s");
 
-    string signature = read(3);
-    if(signature != "VuX")
+    // an unknown number of unknown characters may appear because of
+    // input buffer flushing when rebooting device
+    string s;
+    do {
+      s = read(1);
+    } while(s[0] != SIGNATURE[0]);
+
+    string signature = s + read(2); // one non-E plus two symbols
+    if(signature != SIGNATURE)
       throw new protocol_error("wrong signature", signature);
 
     string s_type = read(1);
@@ -373,6 +382,8 @@ private:
   unsigned _eeprom_bytes;
   unsigned _page_words, _flash_pages, _boot_pages;
 };
+
+const char* vuxboot::SIGNATURE = "VuX";
 
 string read_file(string filename, storage::format format) {
   ios::openmode flags = ios::in;
