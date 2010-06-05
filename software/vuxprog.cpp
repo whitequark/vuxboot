@@ -58,6 +58,7 @@ const char* usage[] = {
   "    -i SEQ\tstart bootloader by sending SEQ to port",
   "    -r\t\treset device after successful programming",
   "    -a\t\tdump full flash including bootloader code",
+  "    -d\t\toutput debug information",
   "    -F\t\tdo things which sane human wouldn't",
   ""
 };
@@ -115,7 +116,7 @@ private:
 
 class vuxboot {
 public:
-  vuxboot(string filename, unsigned baud = 0) {
+  vuxboot(string filename, unsigned baud = 0) : debug(false) {
     _fd = open(filename.c_str(), O_RDWR | O_NONBLOCK);
     if(!_fd) throw new io_error("cannot open port");
 
@@ -124,6 +125,14 @@ public:
 
   ~vuxboot() {
     close(_fd);
+  }
+
+  bool get_debug() {
+    return debug;
+  }
+
+  void set_debug(bool new_debug) {
+    debug = new_debug;
   }
 
   void identify() {
@@ -274,6 +283,23 @@ public:
         throw new io_error("cannot read()");
       }
 
+      if(debug) {
+        cerr << "read(";
+        for(int i = 0; i < retval; i++) {
+          char val[3];
+          sprintf(val, "%02X", *(data + received + i));
+          cerr << val << ' ';
+        }
+        for(int i = 0; i < retval; i++) {
+          char chr = *(data + received + i);
+          if(isgraph(chr))
+            cerr << chr;
+          else
+            cerr << '.';
+        }
+        cerr << ")" << endl;
+      }
+
       received += retval;
     }
 
@@ -281,12 +307,32 @@ public:
   }
 
   void write(string data) {
+    if(debug) {
+      cerr << "write(";
+      for(int i = 0; i < data.length(); i++) {
+        char val[3];
+        sprintf(val, "%02X", data[i]);
+        if(i != 0)
+          cerr << ' ';
+        cerr << val;
+      }
+      for(int i = 0; i < data.length(); i++) {
+        char chr = data[i];
+        if(isgraph(chr))
+          cerr << chr;
+        else
+          cerr << '.';
+      }
+      cerr << ")" << endl;
+    }
+
     if(::write(_fd, data.c_str(), data.length()) != data.length()) {
       throw new io_error("cannot write()");
     }
   }
 
 private:
+  bool debug;
   int _fd;
 
   bool _has_eeprom;
@@ -423,6 +469,7 @@ int main(int argc, char* argv[]) {
   opts.option('F');
   opts.option('a');
   opts.option('r');
+  opts.option('d');
 
   if(!opts.parse(argc, argv) || opts.has('h') || !opts.valid() || (opts.args().size() != 2 &&
         (opts.args().size() != 1 || (opts.args()[0] != "r" && opts.args()[0] != "reset")))) {
@@ -435,6 +482,7 @@ int main(int argc, char* argv[]) {
   bool force = opts.has('F');
   bool do_reset = opts.has('r');
   bool dump_all = opts.has('a');
+  bool debug = opts.has('d');
 
   storage::format format = storage::ihex;
   if(opts.has('f')) {
@@ -455,6 +503,7 @@ int main(int argc, char* argv[]) {
 
   try {
     vuxboot bl(port);
+    bl.set_debug(debug);
 
     if(opts.has('i'))
       bl.write(opts.get('i'));
