@@ -32,6 +32,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/select.h>
+#include <sys/ioctl.h>
+#include <linux/serial.h>
+#include <termios.h>
 
 using namespace std;
 
@@ -117,11 +120,32 @@ private:
 
 class vuxboot {
 public:
-  vuxboot(string filename, unsigned baud = 0) : debug(false) {
-    _fd = open(filename.c_str(), O_RDWR | O_NONBLOCK);
+  vuxboot(string filename, unsigned baud = 115200) : debug(false) {
+    _fd = open(filename.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
     if(!_fd) throw new io_error("cannot open port");
 
-    // TODO: set baud rate
+    // Serial initialization was written with FTDI USB-to-serial converters
+    // in mind. Anyway, who wants to use non-8n1 protocol?
+
+    termios tio = {0};
+    tio.c_iflag = IGNPAR;
+    tio.c_oflag = 0;
+    tio.c_cflag = B38400 | CLOCAL | CREAD | CS8;
+    tio.c_lflag = 0;
+
+    tcflush(_fd, TCIFLUSH);
+    tcsetattr(_fd, TCSANOW, &tio);
+
+    // Following piece of code is copied from some orphaned Wine patch:
+    // so there are weird variable names. Try googling them!
+    serial_struct nuts;
+    ioctl(_fd, TIOCGSERIAL, &nuts);
+    nuts.custom_divisor = nuts.baud_base / baud;
+    if (!(nuts.custom_divisor)) nuts.custom_divisor = 1;
+    int arby = nuts.baud_base / nuts.custom_divisor;
+    nuts.flags &= ~ASYNC_SPD_MASK;
+    nuts.flags |= ASYNC_SPD_CUST;
+    ioctl(_fd, TIOCSSERIAL, &nuts);
   }
 
   ~vuxboot() {
