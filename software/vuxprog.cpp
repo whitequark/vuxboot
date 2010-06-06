@@ -123,7 +123,7 @@ class vuxboot {
 public:
   vuxboot(string filename, unsigned baud = B115200) : _debug(false) {
     _fd = open(filename.c_str(), O_RDWR | O_NOCTTY);
-    if(!_fd) throw new io_error("cannot open port");
+    if(_fd < 0) throw new io_error("cannot open port");
 
     // Serial initialization was written with FTDI USB-to-serial converters
     // in mind. Anyway, who wants to use non-8n1 protocol?
@@ -135,6 +135,8 @@ public:
     tio.c_oflag = 0;
     tio.c_cflag = baud | CLOCAL | CREAD | CS8;
     tio.c_lflag = 0;
+    tio.c_cc[VMIN] = 1;
+    tio.c_cc[VTIME] = 0;
 
     tcflush(_fd, TCIFLUSH);
     tcsetattr(_fd, TCSANOW, &tio);
