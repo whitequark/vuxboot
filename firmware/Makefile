@@ -40,4 +40,4 @@ firmware.hex: firmware.elf
 	@echo
 
 flash:
-	avrdude $(DUDECONFIG) -c $(PROG) -U flash:w:main.hex
+	avrdude $(DUDECONFIG) -c $(PROG) -U flash:w:firmware.hex
