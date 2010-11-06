@@ -448,8 +448,7 @@ string read_file(string filename, storage::format format) {
         unsigned int org = (bdata[4] << 24) + (bdata[5] << 16) +
             (bdata[6] << 8) + bdata[7];
 
-        for(int i = 0; i < org; i++)
-          image[i] = 0xff; // erase anything below .org
+        // ignore .org
       } else {
         throw new input_error("invalid ihex data (type)");
       }
