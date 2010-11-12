@@ -308,7 +308,7 @@ public:
         throw new io_error("i/o error");
       }
 
-      retval = ::read(_fd, data + received, length);
+      retval = ::read(_fd, data + received, length - received);
       if(retval == -1) {
         throw new io_error("cannot read()");
       } else if(retval == 0) {
